@@ -1,0 +1,43 @@
+version: "3.7"
+
+services:
+  mariadb:
+    image: mariadb:10.1
+    container_name: app_mariadb
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_DATABASE: app
+      MYSQL_ROOT_USER: root
+      MYSQL_ROOT_PASSWORD: root
+      TZ: 'Asia/Tokyo'
+    volumes:
+      - ./mariadb/data:/var/lib/mysql
+      - ./mariadb/sql:/docker-entrypoint-initdb.d
+  nginx:
+    image: nginx:1.17.7
+    container_name: app_nginx
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./nginx/conf:/etc/nginx/conf.d
+      - ./static:/static
+      - ./nginx/log:/var/log/nginx
+      - gunicorn:/var/run/gunicorn
+    depends_on:
+      - gunicorn
+  gunicorn:
+    build: gunicorn
+    container_name: app_gunicorn
+    command: gunicorn test_project.wsgi -b 0.0.0.0:8001
+    volumes:
+      - ./gunicorn/src:/code
+      - ./static:/static
+    expose:
+      - "8001"
+    depends_on:
+      - mariadb
+
+volumes:
+  gunicorn:
+    driver: local
